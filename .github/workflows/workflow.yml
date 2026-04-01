@@ -1,0 +1,98 @@
+name: Build binary
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag'
+        required: true
+      release_name:
+        description: 'Release name'
+        required: true
+      release_notes:
+        description: 'Release notes'
+        required: false
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            os_name: linux
+            arch: x86_64
+          - os: ubuntu-latest
+            os_name: linux
+            arch: armv7
+          - os: ubuntu-latest
+            os_name: linux
+            arch: aarch64
+          - os: windows-latest
+            os_name: windows
+            arch: x86_64
+          - os: windows-latest
+            os_name: windows
+            arch: aarch64
+
+    name: Build ${{ matrix.os_name }}-${{ matrix.arch }}
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+          profile: minimal
+
+      - name: Set artifact name
+        shell: bash
+        run: echo "ARTIFACT_NAME=zaprett-repo-utils-${{ matrix.os_name }}-${{ matrix.arch }}" >> $GITHUB_ENV
+
+      - name: Install cross
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: cargo install cross
+
+      - name: Build and Copy on Linux
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: |
+          TARGET=""
+          case "${{ matrix.arch }}" in
+            x86_64) TARGET="x86_64-unknown-linux-gnu";;
+            armv7) TARGET="armv7-unknown-linux-gnueabihf";;
+            aarch64) TARGET="aarch64-unknown-linux-gnu";;
+          esac
+          rustup target add $TARGET
+          cross build --release --target $TARGET
+          mkdir -p release_artifacts
+          cp target/${TARGET}/release/zaprett-repo-utils release_artifacts/${ARTIFACT_NAME}
+
+      - name: Build and Copy on Windows
+        if: matrix.os == 'windows-latest'
+        shell: bash
+        run: |
+          TARGET=""
+          case "${{ matrix.arch }}" in
+            x86_64) TARGET="x86_64-pc-windows-msvc";;
+            aarch64) TARGET="aarch64-pc-windows-msvc";;
+          esac
+          rustup target add $TARGET
+          cargo build --release --target $TARGET
+          mkdir -p release_artifacts
+          cp target/${TARGET}/release/zaprett-repo-utils.exe release_artifacts/${ARTIFACT_NAME}.exe
+
+      - name: Upload to GitHub Release
+        if: github.event_name == 'workflow_dispatch'
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.event.inputs.tag }}
+          name: ${{ github.event.inputs.release_name }}
+          body: ${{ github.event.inputs.release_notes }}
+          files: release_artifacts/*
