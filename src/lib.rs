@@ -4,7 +4,7 @@ use crate::r#enum::CheckResult;
 use crate::structure::{CheckRow, CheckedFile, RepoArtifact, RepoIndex, RepoIndexItem, RepoManifest};
 use anyhow::Context;
 use regex::Regex;
-use sha256::try_digest;
+use sha256::digest;
 use std::env::current_dir;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -65,7 +65,8 @@ fn check_file(path: &Path, manifest_hash: &str) -> anyhow::Result<bool> {
     if !path.is_file() {
         return Ok(false)
     }
-    let hash = try_digest(&path)?;
+    let content = fs::read(&path)?;
+    let hash = digest(&content);
     Ok(hash == *manifest_hash)
 }
 
@@ -152,7 +153,8 @@ fn update(config: &Config) -> anyhow::Result<()> {
     for checked in checked_files.iter_mut() {
         if !checked.is_valid {
             let manifest = &mut checked.manifest;
-            let hash = try_digest(&checked.file_path)?;
+            let content = fs::read(&checked.file_path)?;
+            let hash = digest(&content);
             let mut artifact = manifest.artifact().clone();
             artifact.set_sha256(hash);
             manifest.set_artifact(artifact);
@@ -202,7 +204,8 @@ fn new(index_path: &PathBuf, file_path: &PathBuf) -> anyhow::Result<()> {
     if let Some(parent) = manifest_path.parent() {
         fs::create_dir_all(parent)?;
     }
-    let hash = try_digest(file_path)?;
+    let content = fs::read(&file_path)?;
+    let hash = digest(&content);
     let manifest_url = to_github_url(&manifest_path);
     let file_url = to_github_url(relative);
     let index_item = RepoIndexItem::new(file_name.clone(), String::new(), manifest_url);
