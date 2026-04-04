@@ -1,25 +1,27 @@
 use std::path::PathBuf;
-use clap::{Parser, Subcommand};
+use clap::{Args, Parser, Subcommand};
+
+#[derive(Args, Clone)]
+pub struct CommonArgs {
+    /// Path to manifests dir
+    #[arg(short, long, default_value = "manifests")]
+    pub manifests_path: PathBuf,
+    /// Path to files dir
+    #[arg(short, long, default_value = "files")]
+    pub files_path: PathBuf,
+}
 
 #[derive(Subcommand)]
 pub enum Commands {
     /// Check manifests
     Check {
-        /// Path to manifests dir
-        #[arg(short, long, default_value = "manifests")]
-        manifests_path: PathBuf,
-        /// Path to files dir
-        #[arg(short, long, default_value = "files")]
-        files_path: PathBuf,
+        #[command(flatten)]
+        common: CommonArgs,
     },
     /// Update hashes
     Update {
-        /// Path to manifests dir
-        #[arg(short, long, default_value = "manifests")]
-        manifests_path: PathBuf,
-        /// Path to files dir
-        #[arg(short, long, default_value = "files")]
-        files_path: PathBuf,
+        #[command(flatten)]
+        common: CommonArgs,
     },
     /// Add new file
     New {

@@ -19,12 +19,12 @@ mod config;
 
 pub fn run(args: Cli) -> anyhow::Result<()> {
     match args.command {
-        Commands::Check { manifests_path, files_path } => {
-            let config = Config::new(&manifests_path, &files_path);
+        Commands::Check { common } => {
+            let config = Config::from(common);
             check(&config)?
         },
-        Commands::Update { manifests_path, files_path } => {
-            let config = Config::new(&manifests_path, &files_path);
+        Commands::Update { common } => {
+            let config = Config::from(common);
             update(&config)?
         },
         Commands::New { index_path, file_path } => { new(&index_path, &file_path)? },

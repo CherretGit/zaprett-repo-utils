@@ -1,15 +1,19 @@
-use std::path::Path;
+use std::path::PathBuf;
 use getset::Getters;
+use crate::cli::CommonArgs;
 
 #[derive(Getters)]
 #[getset(get = "pub")]
-pub struct Config<'a> {
-    manifests_path: &'a Path,
-    files_path: &'a Path,
+pub struct Config {
+    manifests_path: PathBuf,
+    files_path: PathBuf,
 }
 
-impl<'a> Config<'a> {
-    pub fn new(manifests_path: &'a Path, files_path: &'a Path) -> Self {
-        Self { manifests_path, files_path }
+impl From<CommonArgs> for Config {
+    fn from(args: CommonArgs) -> Self {
+        Self {
+            manifests_path: args.manifests_path,
+            files_path: args.files_path,
+        }
     }
 }
